@@ -32,10 +32,26 @@ public class CSM : MonoBehaviour
 
         var bounds = FrustumBoundingBox(mainCam, transform);
         Gizmos.color = Color.red;
-        Gizmos.DrawWireCube(bounds.center, bounds.size);
+        // Gizmos.DrawWireCube((bounds[0] + bounds[1]) / 2, bounds[1] - bounds[0]);
+        // Gizmos.DrawLine(bounds[0], bounds[1]);
+        // Gizmos.DrawWireCube();
+        Gizmos.DrawLine(bounds[0], bounds[1]);
+        Gizmos.DrawLine(bounds[1], bounds[2]);
+        Gizmos.DrawLine(bounds[2], bounds[3]);
+        Gizmos.DrawLine(bounds[3], bounds[0]);
+
+        Gizmos.DrawLine(bounds[4], bounds[5]);
+        Gizmos.DrawLine(bounds[5], bounds[6]);
+        Gizmos.DrawLine(bounds[6], bounds[7]);
+        Gizmos.DrawLine(bounds[7], bounds[4]);
+
+        Gizmos.DrawLine(bounds[0], bounds[4]);
+        Gizmos.DrawLine(bounds[1], bounds[5]);
+        Gizmos.DrawLine(bounds[2], bounds[6]);
+        Gizmos.DrawLine(bounds[3], bounds[7]);
     }
 
-    Bounds FrustumBoundingBox(Camera camera, Transform light)
+    Vector3[] FrustumBoundingBox(Camera camera, Transform light)
     {
         // near plane
         Vector3[] nearCorners = new Vector3[4];
@@ -74,13 +90,27 @@ public class CSM : MonoBehaviour
         maxPoint.y = Mathf.Max(nearCorners.Max((p) => p.y), farCorners.Max((p) => p.y));
         maxPoint.z = Mathf.Max(nearCorners.Max((p) => p.z), farCorners.Max((p) => p.z));
 
-        minPoint = light.TransformPoint(minPoint);
-        maxPoint = light.TransformPoint(maxPoint);
+        // HINT: two points can only describe a AABB, so we can't just transform this two points
+        // minPoint = light.TransformPoint(minPoint);
+        // maxPoint = light.TransformPoint(maxPoint);
 
-        Bounds bounds = new();
-        bounds.center = (maxPoint + minPoint) / 2;
-        bounds.size = maxPoint - minPoint;
-        return bounds;
+        var res = new Vector3[8];
+        res[0] = new Vector3(minPoint.x, minPoint.y, minPoint.z);
+        res[1] = new Vector3(minPoint.x, maxPoint.y, minPoint.z);
+        res[2] = new Vector3(maxPoint.x, maxPoint.y, minPoint.z);
+        res[3] = new Vector3(maxPoint.x, minPoint.y, minPoint.z);
+        res[4] = new Vector3(minPoint.x, minPoint.y, maxPoint.z);
+        res[5] = new Vector3(minPoint.x, maxPoint.y, maxPoint.z);
+        res[6] = new Vector3(maxPoint.x, maxPoint.y, maxPoint.z);
+        res[7] = new Vector3(maxPoint.x, minPoint.y, maxPoint.z);
+
+        // back to world space after get 8 points
+        for (int i = 0; i < 8; i++) 
+        {
+            res[i] = light.TransformPoint(res[i]);
+        }
+
+        return res;
     }
 
 }
