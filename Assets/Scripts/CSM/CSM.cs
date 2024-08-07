@@ -17,39 +17,21 @@ public class CSM : MonoBehaviour
 
     }
 
-    void OnGUI()
-    {
-        // Debug.DrawLine(Vector3.zero, new Vector3(0, 0, 100), Color.green, 100, true);
-    }
-
     // don't need start game
     void OnDrawGizmos()
     {
         var mainCam = Camera.main;
         Gizmos.color = Color.green;
-        Gizmos.DrawFrustum(mainCam.transform.position, mainCam.fieldOfView, mainCam.farClipPlane, mainCam.nearClipPlane, mainCam.aspect);
-        // Gizmos.DrawCube(
+        // https://discussions.unity.com/t/drawfrustum-is-drawing-incorrectly/518760/3
+        // Gizmos.DrawFrustum(mainCam.transform.position, mainCam.fieldOfView, mainCam.farClipPlane, mainCam.nearClipPlane, mainCam.aspect); // incorrect
+        GizmosUtilities.DrawFrustum(mainCam);
 
         var bounds = FrustumBoundingBox(mainCam, transform);
         Gizmos.color = Color.red;
-        // Gizmos.DrawWireCube((bounds[0] + bounds[1]) / 2, bounds[1] - bounds[0]);
-        // Gizmos.DrawLine(bounds[0], bounds[1]);
-        // Gizmos.DrawWireCube();
-        Gizmos.DrawLine(bounds[0], bounds[1]);
-        Gizmos.DrawLine(bounds[1], bounds[2]);
-        Gizmos.DrawLine(bounds[2], bounds[3]);
-        Gizmos.DrawLine(bounds[3], bounds[0]);
-
-        Gizmos.DrawLine(bounds[4], bounds[5]);
-        Gizmos.DrawLine(bounds[5], bounds[6]);
-        Gizmos.DrawLine(bounds[6], bounds[7]);
-        Gizmos.DrawLine(bounds[7], bounds[4]);
-
-        Gizmos.DrawLine(bounds[0], bounds[4]);
-        Gizmos.DrawLine(bounds[1], bounds[5]);
-        Gizmos.DrawLine(bounds[2], bounds[6]);
-        Gizmos.DrawLine(bounds[3], bounds[7]);
+        GizmosUtilities.DrawWireCube(bounds);
     }
+
+
 
     Vector3[] FrustumBoundingBox(Camera camera, Transform light)
     {
@@ -105,7 +87,7 @@ public class CSM : MonoBehaviour
         res[7] = new Vector3(maxPoint.x, minPoint.y, maxPoint.z);
 
         // back to world space after get 8 points
-        for (int i = 0; i < 8; i++) 
+        for (int i = 0; i < 8; i++)
         {
             res[i] = light.TransformPoint(res[i]);
         }
