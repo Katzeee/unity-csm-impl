@@ -27,6 +27,18 @@ partial class GizmosUtilities
         }
     }
 
+    public static void DrawWireSquare(Vector3[] square)
+    {
+        if (square.Length < 4)
+        {
+            throw new ArgumentNullException("square");
+        }
+        for (int i = 0; i < 4; i++)
+        {
+            Gizmos.DrawLine(square[i], square[(i + 1) % 4]);
+        }
+    }
+
     public static void DrawWireCube(Vector3[] cube)
     {
         if (cube.Length < 8)
