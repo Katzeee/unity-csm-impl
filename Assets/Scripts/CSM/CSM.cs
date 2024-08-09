@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.UI;
 
 class LightFrustumData
 {
@@ -24,55 +25,79 @@ public class CSM : MonoBehaviour
     public float mixParam = 0.5f;
 
     // Shadow map
-    Matrix4x4[] world2ShadowMats;
     RenderTexture[] shadowMaps;
     private Camera lightCamera;
     public bool showViewFrustum = false;
     public bool showLightFrustum = false;
+    private Shader shadowMapShader;
+    private Matrix4x4[] worldToLightClipMat;
+    [Range(0f, 0.1f)]
+    public float biasNormal = 0f;
+    [Range(0f, 0.02f)]
+    public float biasConstant = 0.01f;
 
     // Start is called before the first frame update
     void Start()
     {
-
+        shadowMapShader = Shader.Find("Custom/ShadowMap");
+        worldToLightClipMat = new Matrix4x4[splitCount];
+        shadowMaps = new RenderTexture[splitCount];
     }
 
     // Update is called once per frame
     void Update()
     {
-        shadowMaps = new RenderTexture[splitCount];
-        for (int i = 0; i < splitCount; i++)
-        {
-            shadowMaps[i] = new RenderTexture(1024, 1024, 24, UnityEngine.Experimental.Rendering.DefaultFormat.Shadow);
-            Shader.SetGlobalTexture("_gShadowMapTexture" + i, shadowMaps[i]);
-        }
+        Shader.SetGlobalInt("_gShadowMapCount", splitCount);
+        Shader.SetGlobalFloatArray("light", new float[3] { transform.position.x, transform.position.y, transform.position.z });
+        Shader.SetGlobalFloat("g_BiasNormal", biasNormal);
+        Shader.SetGlobalFloat("g_BiasConstant", biasConstant);
 
         // create light camera
         if (lightCamera == null)
         {
-            var lightCameraGO = new GameObject();
+            for (int i = 0; i < splitCount; i++)
+            {
+                shadowMaps[i] = new RenderTexture(1024, 1024, 24, RenderTextureFormat.ARGBFloat);
+                Shader.SetGlobalTexture($"_gShadowMapTexture{i}", shadowMaps[i]);
+            }
+            // Shader.SetGlobalTexture("test", shadowMaps[0]);
+            var lightCameraGO = new GameObject("Shadow Cam");
             lightCamera = lightCameraGO.AddComponent<Camera>();
-            // lightCamera.cullingMask = 1 << La
             lightCamera.orthographic = true;
+            lightCamera.enabled = false;
+            lightCamera.clearFlags = CameraClearFlags.SolidColor;
+            lightCamera.backgroundColor = Color.white;
+            // lightCamera.SetReplacementShader(shadowMapShader, "");
+            GameObject.Find("RawImage1").GetComponent<RawImage>().texture = shadowMaps[0];
+            // GameObject.Find("RawImage2").GetComponent<RawImage>().texture = shadowMaps[1];
+            // GameObject.Find("RawImage3").GetComponent<RawImage>().texture = shadowMaps[2];
+            // GameObject.Find("RawImage4").GetComponent<RawImage>().texture = shadowMaps[3];
         }
+
+
         var splits = new float[splitCount + 1];
         splits[0] = Camera.main.nearClipPlane;
-        for (int i = 1; i <= 1; i++)
+        for (int i = 1; i <= splitCount; i++)
         {
             splits[i] = GetTheNthSplit(Camera.main, i);
             // setup light camera
             var bounds = FrustumBoundingBox(Camera.main, splits[i - 1], splits[i], transform);
             Vector3 temp = Vector3.zero;
-            for (i = 0; i < 4; i++)
+            for (int j = 0; j < 4; j++)
             {
-                temp += bounds.corners[i];
+                temp += bounds.corners[j];
             }
             lightCamera.transform.position = temp / 4; // near plane center
             lightCamera.transform.rotation = transform.rotation;
             lightCamera.nearClipPlane = 0;
             lightCamera.farClipPlane = bounds.MaxPoint.z - bounds.MinPoint.z;
             lightCamera.aspect = (bounds.MaxPoint.x - bounds.MinPoint.x) / (bounds.MaxPoint.y - bounds.MinPoint.y);
-            lightCamera.orthographicSize = (bounds.MaxPoint.y - bounds.MinPoint.y) / 2; // half of plane height
+            lightCamera.orthographicSize = (bounds.MaxPoint.y - bounds.MinPoint.y) / 2; // half of near(far) plane height
+            lightCamera.targetTexture = shadowMaps[i - 1];
+            lightCamera.RenderWithShader(shadowMapShader, "");
+            worldToLightClipMat[i - 1] = lightCamera.projectionMatrix * lightCamera.worldToCameraMatrix;
         }
+        Shader.SetGlobalMatrixArray($"_gWorldToLightClipMat", worldToLightClipMat);
 
     }
 
