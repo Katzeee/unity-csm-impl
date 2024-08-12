@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.1835486, g: 0.2290866, b: 0.30559507, a: 1}
+  m_IndirectSpecularColor: {r: 0.18154779, g: 0.22719112, b: 0.30740663, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -334,8 +334,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -1664, y: 824}
-  m_SizeDelta: {x: 512, y: 512}
+  m_AnchoredPosition: {x: -832, y: 412}
+  m_SizeDelta: {x: 256, y: 256}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &481746797
 MonoBehaviour:
@@ -667,13 +667,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 611075490}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.052335896, y: 0, z: 0, w: 0.9986295}
-  m_LocalPosition: {x: 0, y: 10, z: 0}
+  m_LocalRotation: {x: 0.22239941, y: 0, z: 0, w: 0.9749557}
+  m_LocalPosition: {x: 0, y: 10.88, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 6, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 25.7, y: 0, z: 0}
 --- !u!1 &654543604
 GameObject:
   m_ObjectHideFlags: 0
@@ -1466,13 +1466,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1688626008}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.22929, y: -0.60130596, z: 0.1856754, w: 0.7425509}
+  m_LocalRotation: {x: 0.2329629, y: -0.7329629, z: 0.30360317, w: 0.5624223}
   m_LocalPosition: {x: -26.4, y: 42.5, z: 5.6}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 34.32, y: -78, z: 0}
+  m_LocalEulerAnglesHint: {x: 45, y: -105, z: 0}
 --- !u!114 &1688626011
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1498,9 +1498,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   splitCount: 4
-  mixParam: 0.394
+  mixParam: 0.712
   showViewFrustum: 0
-  showLightFrustum: 0
+  showLightFrustum: 1
   biasNormal: 0
   biasConstant: 0.0047
 --- !u!1 &1770688819

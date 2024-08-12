@@ -36,6 +36,8 @@ public class CSM : MonoBehaviour
     [Range(0f, 0.02f)]
     public float biasConstant = 0.01f;
 
+    private int shadowMapTexelSize = 1024;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -57,7 +59,7 @@ public class CSM : MonoBehaviour
         {
             for (int i = 0; i < splitCount; i++)
             {
-                shadowMaps[i] = new RenderTexture(1024, 1024, 24, RenderTextureFormat.ARGBFloat);
+                shadowMaps[i] = new RenderTexture(shadowMapTexelSize, shadowMapTexelSize, 24, RenderTextureFormat.ARGBFloat);
                 Shader.SetGlobalTexture($"_gShadowMapTexture{i}", shadowMaps[i]);
             }
             // Shader.SetGlobalTexture("test", shadowMaps[0]);
@@ -91,6 +93,13 @@ public class CSM : MonoBehaviour
             lightCamera.transform.rotation = transform.rotation;
             lightCamera.nearClipPlane = 0;
             lightCamera.farClipPlane = bounds.MaxPoint.z - bounds.MinPoint.z;
+
+            // Vector3[] nearCorners = new Vector3[4];
+            // Vector3[] farCorners = new Vector3[4];
+            // GetCamFrustum(Camera.main, splits[i - 1], splits[i], out nearCorners, out farCorners);
+            // lightCamera.aspect = 1;
+            // lightCamera.orthographicSize = 30;
+            // lightCamera.orthographicSize = (farCorners[0] - nearCorners[2]).magnitude;
             lightCamera.aspect = (bounds.MaxPoint.x - bounds.MinPoint.x) / (bounds.MaxPoint.y - bounds.MinPoint.y);
             lightCamera.orthographicSize = (bounds.MaxPoint.y - bounds.MinPoint.y) / 2; // half of near(far) plane height
             lightCamera.targetTexture = shadowMaps[i - 1];
@@ -124,17 +133,24 @@ public class CSM : MonoBehaviour
         }
     }
 
-
-    LightFrustumData FrustumBoundingBox(Camera camera, float nearPlane, float farplane, Transform light)
+    void GetCamFrustum(Camera camera, float nearPlane, float farplane, out Vector3[] nearCorners, out Vector3[] farCorners)
     {
         // near plane
-        Vector3[] nearCorners = new Vector3[4];
+        nearCorners = new Vector3[4];
         FrustumCornerToWorldSpace(camera, nearPlane, Camera.MonoOrStereoscopicEye.Mono, nearCorners);
 
         // far plane
-        Vector3[] farCorners = new Vector3[4];
+        farCorners = new Vector3[4];
         FrustumCornerToWorldSpace(camera, farplane, Camera.MonoOrStereoscopicEye.Mono, farCorners);
+    }
 
+
+    LightFrustumData FrustumBoundingBox(Camera camera, float nearPlane, float farPlane, Transform light)
+    {
+
+        Vector3[] nearCorners = new Vector3[4];
+        Vector3[] farCorners = new Vector3[4];
+        GetCamFrustum(camera, nearPlane, farPlane, out nearCorners, out farCorners);
         // calculate bounding box
         Vector3 minPoint = new();
         Vector3 maxPoint = new();
@@ -152,10 +168,31 @@ public class CSM : MonoBehaviour
         maxPoint.y = Mathf.Max(nearCorners.Max((p) => p.y), farCorners.Max((p) => p.y));
         maxPoint.z = Mathf.Max(nearCorners.Max((p) => p.z), farCorners.Max((p) => p.z));
 
+
+
+
+        // cam rotation 
+        Vector2 tempZ = new Vector2(minPoint.z, maxPoint.z); // store z
+        Vector3 midPoint = (maxPoint + minPoint) / 2;
+        float boxLength = (farCorners[2] - nearCorners[0]).magnitude;
+
         LightFrustumData bounds = new();
+        minPoint = midPoint - Vector3.one * boxLength / 2.0f;
+        maxPoint = midPoint + Vector3.one * boxLength / 2.0f;
+        // minPoint.z = tempZ.x; // recover z
+        // maxPoint.z = tempZ.y;
+
+        // cam translation
+        float worldTexel = (maxPoint.x - minPoint.x) / shadowMapTexelSize;
+        minPoint /= worldTexel;
+        maxPoint /= worldTexel;
+        minPoint = new Vector3(Mathf.Floor(minPoint.x), Mathf.Floor(minPoint.y), Mathf.Floor(minPoint.z));
+        maxPoint = new Vector3(Mathf.Floor(maxPoint.x), Mathf.Floor(maxPoint.y), Mathf.Floor(maxPoint.z));
+        minPoint *= worldTexel;
+        maxPoint *= worldTexel;
+
         bounds.MinPoint = minPoint;
         bounds.MaxPoint = maxPoint;
-
         // HINT: two points can only describe a AABB, so we should record all 8 points
         bounds.corners[0] = new Vector3(minPoint.x, minPoint.y, minPoint.z);
         bounds.corners[1] = new Vector3(minPoint.x, maxPoint.y, minPoint.z);

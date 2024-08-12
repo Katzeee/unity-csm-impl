@@ -46,7 +46,7 @@ Shader "Custom/Lit"
             float PCF(sampler2D shadowMap, float3 pos_L) 
             {
                 float shadow = 0.0f;
-                int kernel = 2;
+                int kernel = 0;
                 for (int i = -kernel; i <= kernel; i++)
                 {
                     for (int j = -kernel; j <= kernel; j++)
@@ -55,8 +55,8 @@ Shader "Custom/Lit"
                         shadow += pos_L.z > depth ? 0.0f : 1.0f;
                     }
                 }
-
-                return shadow / 25.0f;
+                float texture_area = (2.0f * kernel) + 1.0f;
+                return shadow / texture_area;
             }
 
             float CaculateShadow(float4 pos_W)
@@ -113,12 +113,12 @@ Shader "Custom/Lit"
             { 
                 fixed4 ambient = float4(UNITY_LIGHTMODEL_AMBIENT.rgb, 1.0);
                 fixed3 lightDir = normalize(_WorldSpaceLightPos0.xyz);
-                fixed4 color = float4(1.0, 1.0, 1.0, 1.0);
-                color.xyz = _Diffuse.xyz * max(0, dot(i.normal_W, lightDir));
+                fixed4 diffuse = float4(1.0, 1.0, 1.0, 1.0);
+                diffuse.xyz = _Diffuse.xyz * max(0, dot(i.normal_W, lightDir));
 
                 float shadow = CaculateShadow(i.pos_W);
 
-                return color * shadow;
+                return ambient + diffuse * shadow;
             }
             ENDCG
         }
