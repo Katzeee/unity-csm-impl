@@ -59,8 +59,17 @@ Shader "Custom/Lit"
                 float texture_area = kernel * 2.0f + 1.0f;
                 return shadow / texture_area / texture_area;
             }
+            
+            float CalculateBlend(float4 pos_L)
+            {
+                float2 one_minus_pos_L = float2(1 - pos_L.x, 1 - pos_L.y);
+                float min1 = min(pos_L.x, pos_L.y);
+                float min2 = min(one_minus_pos_L.x, one_minus_pos_L.y);
+                float weight = min(min1, min2) / 0.5f;
+                return weight;
+            }
 
-            int CalculateSplit(float4 pos_W, inout float4 pos_L)
+            int CalculateSplit(float4 pos_W, inout float4 pos_L, inout float4 next_split_pos_L)
             {
                 for (int i = 0; i < _gShadowMapCount ; i++)
                 {
@@ -71,105 +80,53 @@ Shader "Custom/Lit"
                         pos_L.y >= 0 && pos_L.y <= 1 && 
                         pos_L.z >= 0 && pos_L.z <= 1 - 0.01) // in cur split
                     {
+                        if (i != _gShadowMapCount)
+                        {
+                            next_split_pos_L = mul(_gWorldToLightClipMat[i + 1], pos_W);
+                            next_split_pos_L = next_split_pos_L / next_split_pos_L.w; // to light ndc
+                            next_split_pos_L.xyz = next_split_pos_L.xyz * 0.5f + 0.5f; // xy = uv, z = depth
+                        }
                         return i;
                     }
+                    
                 }
                 return _gShadowMapCount;
             }
 
-            float CalculateShadow2(float4 pos_W, float4 pos)
+            float CalculateShadow(float4 pos_W)
             {
                 float4 pos_L;
-                int split = CalculateSplit(pos_W, pos_L);
+                float4 next_split_pos_L;
+                int split = CalculateSplit(pos_W, pos_L, next_split_pos_L);
                 half shadow = 1.0f;
+                half next_shadow = 1.0f;
                 switch (split)
                 {
                     case 0:
                         shadow = PCF(1, _gShadowMapTexture0, pos_L);
+                        next_shadow = PCF(1, _gShadowMapTexture1, next_split_pos_L);
                         break;
                     case 1:
                         shadow = PCF(1, _gShadowMapTexture1, pos_L);
+                        next_shadow = PCF(1, _gShadowMapTexture2, next_split_pos_L);
                         break;
                     case 2:
                         shadow = PCF(1, _gShadowMapTexture2, pos_L);
+                        next_shadow = PCF(1, _gShadowMapTexture3, next_split_pos_L);
                         break;
                     case 3:
                         shadow = PCF(1, _gShadowMapTexture3, pos_L);
                         break;
                 }
-                // if (shadow <= 1.0f)
-                // {
-                    return shadow;
-                // }
-                // return 1.0f;
-            }
-
-            float CalculateShadow(float4 pos_W, float4 pos)
-            {
-                float4 pos_L;
-                float shadow[8];
-                float shadow_weight[8];
-                float z = pos.z * 0.5f + 0.5f;
-                // float z = 1.0f;
-                for (int i = 0; i < _gShadowMapCount ; i++)
+                // blend
+                half weight = 0.0f;
+                if (split < _gShadowMapCount)
                 {
-                    shadow[i] = 1.0f;
-                    shadow_weight[i] = 0.0f;
-                    pos_L = mul(_gWorldToLightClipMat[i], pos_W);
-                    pos_L = pos_L / pos_L.w; // to light ndc
-                    pos_L.xyz = pos_L.xyz * 0.5f + 0.5f; // xy = uv, z = depth
-                    if (pos_L.x >= 0 && pos_L.x <= 1 && 
-                        pos_L.y >= 0 && pos_L.y <= 1 && 
-                        pos_L.z >= 0 && pos_L.z <= 1 - 0.01) // in cur split
-                    {
-                        if (i >= 0)
-                        {
-                        // if ((z * (_gZFar[_gShadowMapCount - 1] - _gZNear[0])) <= 1.05 * (_gZFar[i - 1] - _gZNear[i - 1]) + _gZNear[i - 1])
-                        if (z * _gZFar[_gShadowMapCount - 1] <= _gZFar[2])
-                        // if (z <= _gZNear[i])
-                        {
-                            shadow_weight[i] = 2.0f;
-                        }
-                        }
-                        switch (i) 
-                        {
-                            case 0:
-                                shadow[i] = PCF(1, _gShadowMapTexture0, pos_L);
-                                break;
-                            case 1:
-                                shadow[i] = PCF(1, _gShadowMapTexture1, pos_L);
-                                break;
-                            case 2:
-                                shadow[i] = PCF(1, _gShadowMapTexture2, pos_L);
-                                break;
-                            case 3:
-                                shadow[i] = PCF(1, _gShadowMapTexture3, pos_L);
-                                break;
-                        }
-                    }
-                    
+                    weight = CalculateBlend(pos_L);
                 }
-                float shadowSum = 0.0f;
-                float weightSum = 0.0f;
-                // from nearest
-                for (int i = 0; i < _gShadowMapCount; i++)
-                {
-                    if (shadow[i] < 1) // in shadow
-                    {
-                        if (shadow_weight[i] > 0.0f && i < _gShadowMapCount - 1) // need blend
-                        {
-                            return 2.0f;
-                            // return shadow_weight[i];
-                            shadowSum = shadow_weight[i] * shadow[i] + (1.0f - shadow_weight[i]) * shadow[i + 1]; // blend with next cascade
-                            // shadowSum /= shadow_weight[i] + shadow_weight[i + 1];
-                            return shadowSum;
-                        }
-                        return shadow[i];
-                    }
-                }
-                return 1.0f;
-            }
 
+                return lerp(next_shadow, shadow, weight);
+            }
 
             fixed4 frag(v2f i) : SV_Target 
             { 
@@ -178,7 +135,7 @@ Shader "Custom/Lit"
                 fixed4 diffuse = float4(1.0, 1.0, 1.0, 1.0);
                 diffuse.xyz = _Diffuse.xyz * max(0, dot(i.normal_W, lightDir));
 
-                float shadow = CalculateShadow2(i.pos_W, i.pos);
+                float shadow = CalculateShadow(i.pos_W);
 
                 return ambient + diffuse * shadow;
             }
