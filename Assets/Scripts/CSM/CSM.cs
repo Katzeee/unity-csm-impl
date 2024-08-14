@@ -37,6 +37,8 @@ public class CSM : MonoBehaviour
     public float biasConstant = 0.01f;
 
     private int shadowMapTexelSize = 1024;
+    private float[] zFar = new float[8];
+    private float[] zNear = new float[8];
 
     // Start is called before the first frame update
     void Start()
@@ -82,6 +84,8 @@ public class CSM : MonoBehaviour
         for (int i = 1; i <= splitCount; i++)
         {
             splits[i] = GetTheNthSplit(Camera.main, i);
+            zNear[i - 1] = splits[i - 1] - splits[0];
+            zFar[i - 1] = splits[i] - splits[0];
             // setup light camera
             var bounds = FrustumBoundingBox(Camera.main, splits[i - 1], splits[i], transform);
             Vector3 temp = Vector3.zero;
@@ -106,6 +110,8 @@ public class CSM : MonoBehaviour
             lightCamera.RenderWithShader(shadowMapShader, "");
             worldToLightClipMat[i - 1] = lightCamera.projectionMatrix * lightCamera.worldToCameraMatrix;
         }
+        Shader.SetGlobalFloatArray("_gZFar", zFar);
+        Shader.SetGlobalFloatArray("_gZNear", zNear);
         Shader.SetGlobalMatrixArray($"_gWorldToLightClipMat", worldToLightClipMat);
 
     }
@@ -179,8 +185,8 @@ public class CSM : MonoBehaviour
         LightFrustumData bounds = new();
         minPoint = midPoint - Vector3.one * boxLength / 2.0f;
         maxPoint = midPoint + Vector3.one * boxLength / 2.0f;
-        // minPoint.z = tempZ.x; // recover z
-        // maxPoint.z = tempZ.y;
+        minPoint.z = tempZ.x; // recover z
+        maxPoint.z = tempZ.y;
 
         // cam translation
         float worldTexel = (maxPoint.x - minPoint.x) / shadowMapTexelSize;
