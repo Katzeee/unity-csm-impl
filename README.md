@@ -1,5 +1,5 @@
-# unity-shadow-impl
-Use unity to implement some shadow algorithms
+# unity-csm-impl
+Use unity to implement cascaded shadow map algorithm
 
 Support visualized frustum.
 
